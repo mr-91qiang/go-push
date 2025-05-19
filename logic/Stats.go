@@ -1,8 +1,8 @@
 package logic
 
 import (
-	"sync/atomic"
 	"encoding/json"
+	"sync/atomic"
 )
 
 type Stats struct {
@@ -23,18 +23,22 @@ func InitStats() (err error) {
 	return
 }
 
+// 增加分发消息数
 func DispatchTotal_INCR(batchSize int64) {
 	atomic.AddInt64(&G_stats.DispatchTotal, batchSize)
 }
 
+// 增加分发丢弃消息数
 func DispatchFail_INCR(batchSize int64) {
 	atomic.AddInt64(&G_stats.DispatchFail, batchSize)
 }
 
+// 增加推送失败次数
 func PushFail_INCR() {
 	atomic.AddInt64(&G_stats.PushFail, 1)
 }
 
-func (stats *Stats) Dump() (data []byte, err error){
+// 获取统计信息
+func (stats *Stats) Dump() (data []byte, err error) {
 	return json.Marshal(G_stats)
 }

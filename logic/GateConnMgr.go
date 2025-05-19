@@ -2,19 +2,20 @@ package logic
 
 import (
 	"encoding/json"
+
 	"github.com/owenliang/go-push/common"
 )
 
 type PushJob struct {
-	pushType int // 推送类型
-	roomId string // 房间ID
-	items []json.RawMessage	 // 要推送的消息数组
+	pushType int               // 推送类型
+	roomId   string            // 房间ID
+	items    []json.RawMessage // 要推送的消息数组
 }
 
 type GateConnMgr struct {
-	gateConns []*GateConn	// 到所有gateway的连接数组
-	pendingChan []chan byte  // gateway的并发请求控制
-	dispatchChan chan*PushJob // 待分发的推送
+	gateConns    []*GateConn   // 到所有gateway的连接数组
+	pendingChan  []chan byte   // gateway的并发请求控制
+	dispatchChan chan *PushJob // 待分发的推送
 }
 
 var (
@@ -30,20 +31,25 @@ func (gateConnMgr *GateConnMgr) doPush(gatewayIdx int, pushJob *PushJob, itemsJs
 	}
 
 	// 释放名额
-	<- gateConnMgr.pendingChan[gatewayIdx]
+	<-gateConnMgr.pendingChan[gatewayIdx]
 }
 
 // 消息分发协程
-func (gateConnMgr* GateConnMgr) dispatchWorkerMain(dispatchWorkerIdx int) {
+func (gateConnMgr *GateConnMgr) dispatchWorkerMain(dispatchWorkerIdx int) {
 	var (
+		// 推送任务
 		pushJob *PushJob
+		// 网关索引
 		gatewayIdx int
+		// 序列化后的消息
 		itemsJson []byte
+		// 错误
 		err error
 	)
 	for {
 		select {
-		case pushJob = <- gateConnMgr.dispatchChan:
+		//
+		case pushJob = <-gateConnMgr.dispatchChan:
 			// 序列化
 			if itemsJson, err = json.Marshal(pushJob.items); err != nil {
 				continue
@@ -51,9 +57,9 @@ func (gateConnMgr* GateConnMgr) dispatchWorkerMain(dispatchWorkerIdx int) {
 			// 分发到所有gateway
 			for gatewayIdx = 0; gatewayIdx < len(gateConnMgr.gateConns); gatewayIdx++ {
 				select {
-				case gateConnMgr.pendingChan[gatewayIdx] <- 1:	// 并发控制
+				case gateConnMgr.pendingChan[gatewayIdx] <- 1: // 并发控制
 					go gateConnMgr.doPush(gatewayIdx, pushJob, itemsJson)
-				default:	// 并发已满, 直接丢弃
+				default: // 并发已满, 直接丢弃
 				}
 			}
 		}
@@ -62,18 +68,22 @@ func (gateConnMgr* GateConnMgr) dispatchWorkerMain(dispatchWorkerIdx int) {
 
 func InitGateConnMgr() (err error) {
 	var (
+		// 网关索引
 		gatewayIdx int
+		// 分发协程索引
 		dispatchWorkerIdx int
+		// 网关配置
 		gatewayConfig GatewayConfig
+		// 网关连接管理器
 		gateConnMgr *GateConnMgr
 	)
-
+	// 初始化网关连接管理器
 	gateConnMgr = &GateConnMgr{
-		gateConns: make([]*GateConn, len(G_config.GatewayList)),
-		pendingChan: make([]chan byte, len(G_config.GatewayList)),
-		dispatchChan: make(chan*PushJob, G_config.GatewayDispatchChannelSize),
+		gateConns:    make([]*GateConn, len(G_config.GatewayList)),
+		pendingChan:  make([]chan byte, len(G_config.GatewayList)),
+		dispatchChan: make(chan *PushJob, G_config.GatewayDispatchChannelSize),
 	}
-
+	// 初始化网关连接
 	for gatewayIdx, gatewayConfig = range G_config.GatewayList {
 		if gateConnMgr.gateConns[gatewayIdx], err = InitGateConn(&gatewayConfig); err != nil {
 			return
@@ -89,6 +99,7 @@ func InitGateConnMgr() (err error) {
 	return
 }
 
+// 全量推送
 func (gateConnMgr *GateConnMgr) PushAll(items []json.RawMessage) (err error) {
 	var (
 		pushJob *PushJob
@@ -96,7 +107,7 @@ func (gateConnMgr *GateConnMgr) PushAll(items []json.RawMessage) (err error) {
 
 	pushJob = &PushJob{
 		pushType: common.PUSH_TYPE_ALL,
-		items: items,
+		items:    items,
 	}
 
 	select {
@@ -116,8 +127,8 @@ func (gateConnMgr *GateConnMgr) PushRoom(roomId string, items []json.RawMessage)
 
 	pushJob = &PushJob{
 		pushType: common.PUSH_TYPE_ROOM,
-		roomId: roomId,
-		items: items,
+		roomId:   roomId,
+		items:    items,
 	}
 
 	select {
