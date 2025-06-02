@@ -2,19 +2,21 @@ package gateway
 
 import (
 	"sync"
+
 	"github.com/owenliang/go-push/common"
 )
 
 // 房间
 type Room struct {
 	rwMutex sync.RWMutex
-	roomId string
+	// id
+	roomId  string
 	id2Conn map[uint64]*WSConnection
 }
 
 func InitRoom(roomId string) (room *Room) {
-	room = &Room {
-		roomId: roomId,
+	room = &Room{
+		roomId:  roomId,
 		id2Conn: make(map[uint64]*WSConnection),
 	}
 	return
@@ -37,7 +39,7 @@ func (room *Room) Join(wsConn *WSConnection) (err error) {
 	return
 }
 
-func (room *Room) Leave(wsConn* WSConnection) (err error) {
+func (room *Room) Leave(wsConn *WSConnection) (err error) {
 	var (
 		existed bool
 	)
